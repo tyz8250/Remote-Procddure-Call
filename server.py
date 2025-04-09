@@ -1,6 +1,7 @@
 import math
 import json
 import socket
+import os
 
 #関数の定義
 
@@ -31,7 +32,28 @@ rpc_functions = {"floor": floor, "nroot": nroot, "reverse": reverse, "validAnagr
 #jsonファイルの"method"を関数、"params"を引数とする
 
 #以下サーバとしての処理
-sock = socket.
+
+#UNIXソケットをストリームモードで作成する
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+socket_path = "/tmp/my_socket"
+
+# 以前の接続が残っていた場合に備えて、サーバアドレスをアンリンク（削除）します
+try:
+    os.unlink(socket_path)
+# サーバアドレスが存在しない場合、例外を無視します
+except FileNotFoundError:
+    pass
+print('Starting up on {}'.format(socket_path))
+
+#サーバアドレスにソケットをバインドする（接続する）
+sock.bind(socket_path)
+
+# ソケットが接続要求を待機
+sock.listen(1)
+
+print(f"Listening on {socket_path}")
+
 
 
 #jsonファイルを受け取る処理
