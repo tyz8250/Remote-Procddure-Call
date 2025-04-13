@@ -54,22 +54,45 @@ sock.listen(1)
 
 print(f"Listening on {socket_path}")
 
+#無限ループでクライアントからの接続を待つ
+while True:
+    #クライアントからの接続を受け入れる
+    connection, client_address = sock.accept()
+    try:
+        print("connection from", client_address)
+    
+    # ループの開始。サーバが新しいデータを待ち続ける。
+        while True:
+            data = b''
+            while True:
+                chunk = connection.recv(16)  # 少しずつデータを受信
+                if not chunk:
+                    break  # クライアントが切断された場合
+                data += chunk
+                try:
+                    json.loads(data.decode('utf-8'))
+                    break  # 有効なJSONデータが受信できた
+                except json.JSONDecodeError:
+                    pass  # JSONがまだ完全でない場合は受信を続ける
 
+            if not chunk:
+                break  # クライアントが切断された場合
 
-#jsonファイルを受け取る処理
-with open("data.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
-print(data) #受け取ったjsonファイルを表示する。
-#型の確認（関数に対応する型かどうか）
-#受け取ったjsonファイルの"method"を確認し、引き渡し5つの関数のいずれかを返す
-answer =  rpc_functions[data["method"]](*data ["params"])
-print(answer)
-#結果として、resultを作成する処理
-result_data = {
-    "result":answer,
-    "id": data["id"]
-}
+            # JSONデータを解析
+            received_data = json.loads(data.decode('utf-8'))   
+            print("Received ", received_data)
 
-with open("result.json", "w", encoding="utf-8") as f:
-    json.dump(result_data, f, indent=4)
-#resultをクライアントに返す処理
+            # 関数を呼び出し、結果を取得
+            answer = rpc_functions[received_data["method"]](*received_data["params"])
+            print(answer)
+
+            # 結果をJSON形式でクライアントに送信
+            result_data = {
+                "result": answer,
+                "id": received_data["id"]
+            }
+            response_json = json.dumps(result_data).encode('utf-8')
+            connection.sendall(response_json)
+
+    finally:
+        connection.close()
